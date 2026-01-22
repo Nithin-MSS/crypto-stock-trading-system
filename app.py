@@ -181,6 +181,83 @@ if feature_importance_ref is not None:
     ax.bar(["MA Short", "MA Long", "Volatility"], feature_importance_ref)
     st.pyplot(fig)
 
+# ==================================================
+# 🤖 LLM-POWERED EXPLANATION CHATBOT (ZERO COST)
+# ==================================================
+
+st.subheader("🤖 AI Trading Assistant (Explainability Bot)")
+st.caption("Powered by a local open-source LLM (no APIs, no cost)")
+
+from transformers import T5Tokenizer, T5ForConditionalGeneration
+import torch
+
+# ---------------- Load Model (cached) ----------------
+@st.cache_resource
+def load_llm():
+    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
+    model = T5ForConditionalGeneration.from_pretrained(
+        "google/flan-t5-small"
+    )
+    return tokenizer, model
+
+tokenizer, llm_model = load_llm()
+
+# ---------------- Chat Memory ----------------
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+# ---------------- User Input ----------------
+user_query = st.chat_input("Ask about market trend, a stock, or signals...")
+
+# ---------------- Helper: Build Context ----------------
+def build_context(user_query):
+    context = f"""
+India Market Bias: {india_bias}
+
+Available Stock Signals:
+"""
+
+    for row in results:
+        context += (
+            f"{row['Symbol']} -> {row['Signal']} "
+            f"(Confidence: {row['Confidence (%)']}%)\n"
+        )
+
+    context += f"""
+User Question:
+{user_query}
+
+Explain clearly using the data above.
+Do not give financial advice.
+"""
+    return context.strip()
+
+# ---------------- Generate Answer ----------------
+def generate_answer(prompt):
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
+    outputs = llm_model.generate(
+        **inputs,
+        max_length=200,
+        do_sample=False
+    )
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+# ---------------- Chat Flow ----------------
+if user_query:
+    with st.spinner("Thinking..."):
+        prompt = build_context(user_query)
+        answer = generate_answer(prompt)
+
+    st.session_state.chat_history.append(
+        {"user": user_query, "bot": answer}
+    )
+
+# ---------------- Display Chat ----------------
+for chat in st.session_state.chat_history:
+    with st.chat_message("user"):
+        st.write(chat["user"])
+    with st.chat_message("assistant"):
+        st.write(chat["bot"])
 # --------------------------------------------------
 # Footer
 # --------------------------------------------------
