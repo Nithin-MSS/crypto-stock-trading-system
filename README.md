@@ -1,42 +1,34 @@
 📊 India Market Trading Signal System
 
-A real-time machine learning–based trading signal system for Indian stocks, combining technical indicators, market-wide bias detection, and a data-grounded AI assistant, deployed on Streamlit Cloud.
+A real-time machine learning trading signal platform for Indian equities that generates context-aware BUY / SELL signals using technical indicators and market-wide bias analysis.
 
 ⚠️ Educational project only. Not financial advice.
 
-🚀 Live Demo
+🚀 Live Application
 
-👉 (Add your Streamlit app link here)
+👉 [Streamlit App Link] (add your deployed link here)
 
-🧠 Project Overview
+🧠 What This Project Does
 
-This project provides BUY / SELL trading signals for Indian equities using historical price data and classical machine learning models.
-It also incorporates market-level intelligence using NIFTY and BANKNIFTY indices and exposes insights via an interactive web dashboard.
+This system analyzes historical price data to generate probabilistic trading signals for Indian stocks.
+It combines asset-level ML predictions with market-level intelligence (NIFTY & BANKNIFTY) and presents results through an interactive dashboard.
 
-Key goals:
+The goal was to build a deployable, stable, and explainable ML system, not a black-box trading bot.
 
-Build a deployable, stable ML system
+✨ Key Highlights
+📈 Trading Signals
 
-Avoid heavy DL frameworks for compatibility and reliability
+BUY / SELL / STRONG BUY / STRONG SELL signals
 
-Ensure explainability and data-grounded outputs
+Confidence scores from ML model probabilities
 
-Provide a generic assistant that adapts automatically to live signals
-
-✨ Key Features
-📈 Live Trading Signals
-
-Fetches real-time market data using yfinance
-
-Generates BUY / SELL / STRONG BUY / STRONG SELL signals
-
-Confidence scores derived from ML model probabilities
+Signals adapt automatically to market conditions
 
 🌍 Market Bias Detection
 
 Uses NIFTY 50 and BANKNIFTY
 
-Determines overall market regime:
+Classifies market as:
 
 🟢 Strong Bullish
 
@@ -44,13 +36,15 @@ Determines overall market regime:
 
 🟡 Sideways
 
-Stock signals are context-aware of market bias
+Individual stock signals are adjusted using market bias
 
-🤖 Generic AI Trading Assistant
+🤖 AI Trading Assistant (Rule-Based)
 
 No APIs, no LLMs, no cost
 
-Answers questions such as:
+Fully data-grounded (reasons only over live ML outputs)
+
+Supports questions like:
 
 What is the market trend?
 
@@ -58,136 +52,130 @@ Should I buy any stock now?
 
 What are the strongest signals today?
 
-Fully data-driven (no hardcoded companies)
+🧠 Explainability
 
-Avoids hallucination by reasoning only over live ML outputs
+Feature importance from RandomForest
 
-🧠 Model Explainability
+Interpretable drivers:
 
-Uses feature importance from RandomForest
+Short-term Moving Average
 
-Helps understand impact of:
-
-Short-term moving average
-
-Long-term moving average
+Long-term Moving Average
 
 Volatility
 
-🏗️ System Architecture
+🏗️ System Flow
 User Input
    ↓
-Streamlit UI
+Streamlit Interface
    ↓
-Data Fetching (yfinance)
+Market Data (yfinance)
    ↓
 Feature Engineering
    ↓
-RandomForest Model
+ML Model (RandomForest)
    ↓
-Trading Signals + Confidence
+Signal + Confidence
    ↓
 Market Bias Adjustment
    ↓
-Dashboard + AI Assistant
+Dashboard + Assistant
 
-⚙️ Technologies Used
+⚙️ Tech Stack
 
 Python 3.13
 
-Streamlit – Web application & deployment
+Streamlit – UI & deployment
 
 pandas / numpy – Data processing
 
-scikit-learn – Machine learning (RandomForest)
+scikit-learn – Machine Learning
 
 yfinance – Market data
 
 matplotlib – Visualizations
 
-No TensorFlow / PyTorch used (chosen for deployment stability and simplicity).
+✔ No TensorFlow / PyTorch (chosen for deployment stability and explainability)
 
 📂 Project Structure
 crypto-stock-trading-system/
-│
 ├── app.py              # Complete Streamlit application
-├── requirements.txt    # Minimal, deployment-safe dependencies
+├── requirements.txt    # Deployment-safe dependencies
 ├── README.md           # Project documentation
 ├── .gitignore
 
-🧪 How Signals Are Generated
+🧪 How the Model Works
 
-Fetch historical OHLC data
+Download OHLC price data
 
-Engineer features:
+Engineer technical features:
 
-Percentage returns
+Returns
 
-Short & long moving averages
+Moving averages
 
-Rolling volatility
+Volatility
 
-Train a RandomForestClassifier
+Train RandomForestClassifier
 
-Predict next-day directional movement
+Predict next-day price direction
 
-Assign confidence using class probabilities
+Assign confidence via class probabilities
 
 Adjust signal strength using market bias
 
-🧩 Design Decisions
-Why RandomForest instead of Deep Learning?
+🧩 Key Design Choices
+Why RandomForest (not Deep Learning)?
 
-Better interpretability
+Interpretable outputs
 
 Faster training
 
 Lower deployment complexity
 
-More robust with limited data
+Robust on limited time-series data
 
-Why rule-based assistant instead of LLM?
+Why Rule-Based Assistant (not LLM)?
 
 Zero cost
 
-No external APIs
+No hallucinations
 
-Fully deterministic & explainable
+Deterministic & explainable
 
-Safer for public deployment
+Safe for public deployment
 
 ⚠️ Limitations
 
-Not intended for live trading or investment decisions
+Not intended for real trading
 
-Uses historical data only
+Uses historical price data only
 
-Does not account for:
+Ignores:
 
-News events
+News & events
 
 Fundamentals
 
 Macroeconomic indicators
 
-🔮 Future Enhancements
+🔮 Future Improvements
 
-Backtesting metrics (Sharpe ratio, drawdown)
+Backtesting metrics (Sharpe, drawdown)
 
-Portfolio-level allocation
+Portfolio-level signal aggregation
 
-Separate local LLM explainability module
+Local LLM-based explainability module
 
-Multi-market support (US, Crypto expanded)
+Expanded multi-market coverage
 
 👤 Author
 
 M. S. S. Nithin
-
+Final Year B.Tech – CSE (AI & ML)
 
 📜 Disclaimer
 
-This project is strictly for educational and learning purposes.
-It does not constitute financial or investment advice.
+This project is built strictly for educational purposes and does not constitute financial or investment advice.
 
 ✅ Status: Completed & Deployed
