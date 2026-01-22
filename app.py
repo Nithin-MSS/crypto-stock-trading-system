@@ -8,13 +8,10 @@ import matplotlib.pyplot as plt
 # --------------------------------------------------
 # Streamlit Config
 # --------------------------------------------------
-st.set_page_config(
-    page_title="Global & India Trading Signal System",
-    layout="wide"
-)
+st.set_page_config(page_title="India Trading Signal System", layout="wide")
 
-st.title("📊 Global & India Market Trading Signal System")
-st.caption("ML-based real-time trading signals with India market intelligence")
+st.title("📊 India Market Trading Signal System")
+st.caption("ML-based trading signals with India market bias")
 
 # --------------------------------------------------
 # Sidebar
@@ -23,7 +20,7 @@ st.sidebar.header("Configuration")
 
 preset = st.sidebar.selectbox(
     "Select Watchlist",
-    ["India Stocks", "US Tech Stocks", "Crypto", "Custom"]
+    ["India Stocks", "Custom"]
 )
 
 custom_symbols = st.sidebar.text_input(
@@ -38,12 +35,10 @@ ma_short = st.sidebar.slider("Short MA", 5, 30, 5)
 ma_long = st.sidebar.slider("Long MA", 20, 100, 30)
 
 # --------------------------------------------------
-# Watchlists
+# Watchlist
 # --------------------------------------------------
 WATCHLISTS = {
-    "India Stocks": ["TATAMOTORS.NS", "TCS.NS", "RELIANCE.NS", "INFY.NS"],
-    "US Tech Stocks": ["AAPL", "MSFT", "GOOGL", "NVDA"],
-    "Crypto": ["BTC-USD", "ETH-USD"]
+    "India Stocks": ["TATAMOTORS.NS", "TCS.NS", "RELIANCE.NS", "INFY.NS"]
 }
 
 symbols = (
@@ -53,15 +48,15 @@ symbols = (
 )
 
 # --------------------------------------------------
-# Company alias map (🔥 FIX)
+# Company Aliases
 # --------------------------------------------------
 COMPANY_ALIASES = {
-    "tata": ["TATAMOTORS.NS"],
-    "tatamotors": ["TATAMOTORS.NS"],
-    "tcs": ["TCS.NS"],
-    "reliance": ["RELIANCE.NS"],
-    "infy": ["INFY.NS"],
-    "infosys": ["INFY.NS"]
+    "tata": "TATAMOTORS.NS",
+    "tatamotors": "TATAMOTORS.NS",
+    "tcs": "TCS.NS",
+    "reliance": "RELIANCE.NS",
+    "infy": "INFY.NS",
+    "infosys": "INFY.NS"
 }
 
 # --------------------------------------------------
@@ -96,33 +91,28 @@ def predict_signal(df):
     )
     model.fit(X, y)
 
-    signal = model.predict(X.iloc[-1:].values)[0]
-    confidence = model.predict_proba(X.iloc[-1:].values).max()
-    importance = model.feature_importances_
+    signal = model.predict(X.iloc[-1:])[0]
+    confidence = model.predict_proba(X.iloc[-1:]).max()
 
-    return signal, round(confidence * 100, 2), importance
+    return signal, round(confidence * 100, 2)
 
 
 # --------------------------------------------------
-# India Market Bias (NIFTY + BANKNIFTY)
+# India Market Bias
 # --------------------------------------------------
-india_indices = {
-    "NIFTY 50": "^NSEI",
-    "BANKNIFTY": "^NSEBANK"
-}
+india_indices = ["^NSEI", "^NSEBANK"]
+bias_votes = []
 
-india_signals = []
-
-for idx in india_indices.values():
+for idx in india_indices:
     idx_df = load_data(idx)
     if not idx_df.empty:
         idx_df = prepare_features(idx_df)
-        sig, _, _ = predict_signal(idx_df)
-        india_signals.append(sig)
+        sig, _ = predict_signal(idx_df)
+        bias_votes.append(sig)
 
-if india_signals.count(1) == 2:
+if bias_votes.count(1) == 2:
     india_bias = "🟢 Strong Bullish"
-elif india_signals.count(-1) == 2:
+elif bias_votes.count(-1) == 2:
     india_bias = "🔴 Strong Bearish"
 else:
     india_bias = "🟡 Sideways"
@@ -131,100 +121,88 @@ else:
 # Run Signals
 # --------------------------------------------------
 results = []
-feature_importance_ref = None
 
-with st.spinner("Running live market analysis..."):
+with st.spinner("Running live analysis..."):
     for sym in symbols:
         try:
-            data = load_data(sym)
-            if data.empty or len(data) < 100:
+            df = load_data(sym)
+            if df.empty:
                 continue
 
-            data = prepare_features(data)
-            signal, confidence, importance = predict_signal(data)
-            price = round(float(data["Close"].iloc[-1]), 2)
+            df = prepare_features(df)
+            sig, conf = predict_signal(df)
 
-            label = "BUY" if signal == 1 else "SELL"
+            label = "BUY" if sig == 1 else "SELL"
 
-            if sym.endswith(".NS"):
-                if india_bias.startswith("🟢") and label == "BUY":
-                    label = "STRONG BUY"
-                elif india_bias.startswith("🔴") and label == "SELL":
-                    label = "STRONG SELL"
-                else:
-                    label = f"WEAK {label}"
+            if india_bias.startswith("🟢") and label == "BUY":
+                label = "STRONG BUY"
+            elif india_bias.startswith("🔴") and label == "SELL":
+                label = "STRONG SELL"
+            else:
+                label = f"WEAK {label}"
 
             results.append({
                 "Symbol": sym,
-                "Price": price,
                 "Signal": label,
-                "Confidence (%)": confidence
+                "Confidence": conf
             })
-
-            if feature_importance_ref is None:
-                feature_importance_ref = importance
 
         except Exception:
             continue
 
 # --------------------------------------------------
-# UI OUTPUT
+# UI
 # --------------------------------------------------
-st.subheader("🌍 Market Bias")
-st.metric("🇮🇳 India Market Bias", india_bias)
+st.subheader("🌍 India Market Bias")
+st.metric("Market Bias", india_bias)
 
-st.subheader("📈 Live Trading Signals")
-if results:
-    st.dataframe(pd.DataFrame(results), use_container_width=True, hide_index=True)
-else:
-    st.warning("No signals generated.")
-
-st.subheader("🧠 Feature Importance")
-if feature_importance_ref is not None:
-    fig, ax = plt.subplots()
-    ax.bar(["MA Short", "MA Long", "Volatility"], feature_importance_ref)
-    st.pyplot(fig)
+st.subheader("📈 Live Signals")
+st.dataframe(pd.DataFrame(results), hide_index=True, use_container_width=True)
 
 # --------------------------------------------------
-# 🤖 CHATBOT (🔥 FIXED)
+# 🤖 CHATBOT (FIXED)
 # --------------------------------------------------
 st.subheader("🤖 AI Trading Assistant")
-st.caption("Ask: 'Should I buy Tata?', 'Sell TCS?', 'Buy or sell Reliance?'")
+st.caption("Ask: 'Should I buy Tata?', 'Sell TCS?', 'Market trend?'")
 
-user_query = st.chat_input("Ask about market or stocks")
+user_query = st.chat_input("Type your question")
 
-def chatbot_answer(query):
-    q = query.lower()
+def chatbot_answer(q):
+    q = q.lower().strip()
+
+    if not q:
+        return "Please ask a question."
 
     if "market" in q:
         return f"The current India market bias is **{india_bias}**."
 
     if "buy" in q or "sell" in q:
-        for alias, symbols_list in COMPANY_ALIASES.items():
+        for alias, symbol in COMPANY_ALIASES.items():
             if alias in q:
-                for s in symbols_list:
-                    for r in results:
-                        if r["Symbol"] == s:
-                            return (
-                                f"{r['Symbol']} is marked as **{r['Signal']}** "
-                                f"with **{r['Confidence (%)']}%** confidence "
-                                f"given a {india_bias} market."
-                            )
-
-        return (
-            "I couldn’t recognise the stock name. "
-            "Try names like Tata, TCS, Reliance, or Infosys."
-        )
+                for r in results:
+                    if r["Symbol"] == symbol:
+                        return (
+                            f"{symbol} is a **{r['Signal']}** "
+                            f"with **{r['Confidence']}%** confidence "
+                            f"given a {india_bias} market."
+                        )
+        return "That stock is not in the current watchlist."
 
     return (
-        "You can ask:\n"
+        "Try asking:\n"
         "- Should I buy Tata?\n"
-        "- Buy or sell TCS?\n"
-        "- Is Reliance a sell?\n"
+        "- Sell TCS?\n"
         "- What is the market trend?"
     )
 
-if user_query:
-    st.chat_message("assistant").write(chatbot_answer(user_query))
+# 🔥 Render BOTH user and assistant
+if user_query is not None:
+    with st.chat_message("user"):
+        st.write(user_query)
+
+    reply = chatbot_answer(user_query)
+
+    with st.chat_message("assistant"):
+        st.write(reply)
 
 st.caption("⚠️ Educational project only. Not financial advice.")
