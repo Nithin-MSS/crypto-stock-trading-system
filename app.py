@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 st.title("📊 Global & India Market Trading Signal System")
-st.caption("ML-based multi-asset trading signals with India market intelligence")
+st.caption("ML-based real-time trading signals with India market intelligence")
 
 # --------------------------------------------------
 # Sidebar
@@ -68,7 +68,6 @@ def prepare_features(df):
     df["MA_Short"] = df["Close"].rolling(ma_short).mean()
     df["MA_Long"] = df["Close"].rolling(ma_long).mean()
     df["Volatility"] = df["Return"].rolling(5).std()
-
     df["Target"] = np.where(df["Close"].shift(-1) > df["Close"], 1, -1)
     df.dropna(inplace=True)
     return df
@@ -187,41 +186,56 @@ if feature_importance_ref is not None:
     st.pyplot(fig)
 
 # --------------------------------------------------
-# 🤖 Rule-Based AI Trading Assistant (Deploy-Safe)
+# 🤖 Rule-Based AI Trading Assistant (FIXED)
 # --------------------------------------------------
 st.subheader("🤖 AI Trading Assistant")
-st.caption("Context-aware assistant powered by live ML signals (no APIs)")
+st.caption("Ask naturally: 'Should I buy Tata?' or 'Buy or sell TCS?'")
 
 user_query = st.chat_input("Ask about market trend or a stock")
 
 def chatbot_answer(query):
     q = query.lower()
 
+    # Market questions
     if "market" in q:
         return f"The current India market bias is **{india_bias}**."
 
+    # Buy / Sell questions
     if "buy" in q or "sell" in q:
         for r in results:
-            if r["Symbol"].lower() in q:
+            symbol = r["Symbol"].lower()
+            company_key = symbol.replace(".ns", "").replace("-", "")
+
+            if company_key in q or symbol in q:
                 return (
                     f"{r['Symbol']} is marked as **{r['Signal']}** "
                     f"with **{r['Confidence (%)']}%** confidence "
                     f"given a {india_bias} market."
                 )
 
+        return (
+            "I couldn’t find that stock in the current watchlist. "
+            "Try adding it to the watchlist or check the spelling."
+        )
+
+    # Safe opportunities
     if "safe" in q or "opportunity" in q:
         strong_buys = [r for r in results if r["Signal"] == "STRONG BUY"]
         if not strong_buys:
             return (
-                "Currently there are no STRONG BUY opportunities. "
+                "There are currently no STRONG BUY opportunities. "
                 f"The market bias is {india_bias}, so caution is advised."
             )
+        else:
+            names = ", ".join(r["Symbol"] for r in strong_buys)
+            return f"Strong buy candidates: {names}"
 
     return (
-        "You can ask about:\n"
-        "- Market trend\n"
-        "- Buy or sell a specific stock\n"
-        "- Safer opportunities"
+        "You can ask:\n"
+        "- Should I buy Tata Motors?\n"
+        "- Buy or sell TCS?\n"
+        "- Is the market bullish or bearish?\n"
+        "- Are there any safe opportunities?"
     )
 
 if user_query:
