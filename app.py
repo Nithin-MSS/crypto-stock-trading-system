@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 # --------------------------------------------------
 # Streamlit Config
 # --------------------------------------------------
-st.set_page_config(page_title="Live Multi-Asset Trading Signal System", layout="wide")
-st.title("📊 Live Multi-Asset Trading Signal System")
-st.caption("Machine Learning–based BUY / SELL / HOLD signals with market-wide insight")
+st.set_page_config(page_title="Global & India Trading Signal System", layout="wide")
+st.title("📊 Global & India Market Trading Signal System")
+st.caption("ML-based multi-asset trading signals with NIFTY market intelligence")
 
 # --------------------------------------------------
 # Sidebar
@@ -19,26 +19,27 @@ st.sidebar.header("Configuration")
 
 preset = st.sidebar.selectbox(
     "Select Watchlist",
-    ["US Tech Stocks", "Crypto Top", "Custom"]
+    ["India Stocks", "US Tech Stocks", "Crypto", "Custom"]
 )
 
 custom_symbols = st.sidebar.text_input(
     "Custom Symbols (comma-separated)",
-    "AAPL,MSFT,TSLA"
+    "TATAMOTORS.NS,TCS.NS"
 )
 
 start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2022-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 
-ma_short = st.sidebar.slider("Short Moving Average", 5, 30, 10)
-ma_long = st.sidebar.slider("Long Moving Average", 20, 100, 50)
+ma_short = st.sidebar.slider("Short MA", 5, 30, 5)
+ma_long = st.sidebar.slider("Long MA", 20, 100, 30)
 
 # --------------------------------------------------
 # Watchlists
 # --------------------------------------------------
 WATCHLISTS = {
-    "US Tech Stocks": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA"],
-    "Crypto Top": ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"]
+    "India Stocks": ["TATAMOTORS.NS", "TCS.NS", "RELIANCE.NS", "INFY.NS"],
+    "US Tech Stocks": ["AAPL", "MSFT", "GOOGL", "NVDA"],
+    "Crypto": ["BTC-USD", "ETH-USD"]
 }
 
 symbols = (
@@ -48,11 +49,11 @@ symbols = (
 )
 
 # --------------------------------------------------
-# Helper Functions
+# Helpers
 # --------------------------------------------------
 @st.cache_data
-def load_data(symbol, start, end):
-    df = yf.download(symbol, start=start, end=end, progress=False)
+def load_data(symbol):
+    df = yf.download(symbol, start=start_date, end=end_date, progress=False)
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
     return df
@@ -62,20 +63,15 @@ def prepare_features(df):
     df["Return"] = df["Close"].pct_change()
     df["MA_Short"] = df["Close"].rolling(ma_short).mean()
     df["MA_Long"] = df["Close"].rolling(ma_long).mean()
-    df["Volatility"] = df["Return"].rolling(10).std()
+    df["Volatility"] = df["Return"].rolling(5).std()
 
-    # Classification target
-    df["Target"] = np.where(
-        df["Close"].shift(-1) > df["Close"], 1, -1
-    )
-
+    df["Target"] = np.where(df["Close"].shift(-1) > df["Close"], 1, -1)
     df.dropna(inplace=True)
     return df
 
 
-def train_and_predict(df):
-    features = ["MA_Short", "MA_Long", "Volatility"]
-    X = df[features]
+def predict_signal(df):
+    X = df[["MA_Short", "MA_Long", "Volatility"]]
     y = df["Target"]
 
     model = RandomForestClassifier(
@@ -85,47 +81,66 @@ def train_and_predict(df):
     )
     model.fit(X, y)
 
-    latest_X = X.iloc[-1:].values
-    prediction = model.predict(latest_X)[0]
-    proba = model.predict_proba(latest_X).max()
-
+    signal = model.predict(X.iloc[-1:].values)[0]
+    confidence = model.predict_proba(X.iloc[-1:].values).max()
     importance = model.feature_importances_
 
-    return prediction, round(proba * 100, 2), importance
+    return signal, round(confidence * 100, 2), importance
 
 
 # --------------------------------------------------
-# Run System
+# INDIA MARKET BIAS (NIFTY + BANKNIFTY)
+# --------------------------------------------------
+india_indices = {"NIFTY 50": "^NSEI", "BANKNIFTY": "^NSEBANK"}
+india_signals = []
+
+for idx in india_indices.values():
+    df_idx = load_data(idx)
+    if not df_idx.empty:
+        df_idx = prepare_features(df_idx)
+        sig, _, _ = predict_signal(df_idx)
+        india_signals.append(sig)
+
+if india_signals.count(1) == 2:
+    india_bias = "🟢 Strong Bullish"
+elif india_signals.count(-1) == 2:
+    india_bias = "🔴 Strong Bearish"
+else:
+    india_bias = "🟡 Sideways"
+
+# --------------------------------------------------
+# RUN SIGNAL SYSTEM
 # --------------------------------------------------
 results = []
-buy_count = sell_count = hold_count = 0
-
 feature_importance_ref = None
 
 with st.spinner("Running live market analysis..."):
     for sym in symbols:
         try:
-            data = load_data(sym, start_date, end_date)
+            data = load_data(sym)
             if data.empty or len(data) < 100:
                 continue
 
             data = prepare_features(data)
-
-            signal, confidence, importance = train_and_predict(data)
+            signal, confidence, importance = predict_signal(data)
 
             price = round(float(data["Close"].iloc[-1]), 2)
 
-            if signal == 1:
-                signal_label = "BUY"
-                buy_count += 1
-            else:
-                signal_label = "SELL"
-                sell_count += 1
+            label = "BUY" if signal == 1 else "SELL"
+
+            # India enhancement
+            if sym.endswith(".NS"):
+                if india_bias.startswith("🟢") and label == "BUY":
+                    label = "STRONG BUY"
+                elif india_bias.startswith("🔴") and label == "SELL":
+                    label = "STRONG SELL"
+                else:
+                    label = f"WEAK {label}"
 
             results.append({
                 "Symbol": sym,
                 "Price": price,
-                "Signal": signal_label,
+                "Signal": label,
                 "Confidence (%)": confidence
             })
 
@@ -136,30 +151,15 @@ with st.spinner("Running live market analysis..."):
             continue
 
 # --------------------------------------------------
-# Market Summary (STEP 1)
+# DISPLAY MARKET BIAS
 # --------------------------------------------------
-total = buy_count + sell_count + hold_count
+st.subheader("🌍 Market Bias")
 
-if total > 0:
-    buy_pct = round((buy_count / total) * 100, 1)
-    sell_pct = round((sell_count / total) * 100, 1)
-
-    if buy_pct >= 60:
-        market_bias = "🟢 Bullish"
-    elif sell_pct >= 60:
-        market_bias = "🔴 Bearish"
-    else:
-        market_bias = "🟡 Neutral"
-
-    st.subheader("🌍 Market Summary")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Assets Analyzed", total)
-    c2.metric("BUY %", f"{buy_pct}%")
-    c3.metric("SELL %", f"{sell_pct}%")
-    c4.metric("Market Bias", market_bias)
+c1, c2 = st.columns(2)
+c1.metric("🇮🇳 India Market Bias", india_bias)
 
 # --------------------------------------------------
-# Signal Table
+# SIGNAL TABLE
 # --------------------------------------------------
 st.subheader("📈 Live Trading Signals")
 
@@ -172,39 +172,14 @@ else:
     st.warning("No signals generated.")
 
 # --------------------------------------------------
-# Feature Importance (STEP 2)
+# FEATURE IMPORTANCE
 # --------------------------------------------------
-st.subheader("🧠 Feature Importance (Explainability)")
+st.subheader("🧠 Feature Importance")
 
 if feature_importance_ref is not None:
     fig, ax = plt.subplots()
-    features = ["MA Short", "MA Long", "Volatility"]
-    ax.bar(features, feature_importance_ref)
-    ax.set_ylabel("Importance")
+    ax.bar(["MA Short", "MA Long", "Volatility"], feature_importance_ref)
     st.pyplot(fig)
-
-# --------------------------------------------------
-# Backtesting + Equity Curve (STEP 3)
-# --------------------------------------------------
-st.subheader("📊 Strategy Backtest (Sample Asset)")
-
-try:
-    sample = load_data(symbols[0], start_date, end_date)
-    sample = prepare_features(sample)
-
-    positions = sample["Target"].values[:-1]
-    returns = sample["Return"].values[1:]
-
-    strategy_returns = positions * returns
-    equity = np.cumprod(1 + strategy_returns)
-
-    fig2, ax2 = plt.subplots()
-    ax2.plot(equity, label="Strategy Equity")
-    ax2.legend()
-    st.pyplot(fig2)
-
-except Exception:
-    st.info("Backtest unavailable for selected asset.")
 
 # --------------------------------------------------
 # Footer
