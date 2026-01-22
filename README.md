@@ -10,13 +10,11 @@ https://crypto-stock-trading-system-uuhilpxf3qvp3cc4cuhghx.streamlit.app/
 
 🔍 What This Does (Quick)
 
--Generates BUY / SELL / STRONG signals for Indian stocks
+- Generates BUY / SELL / STRONG signals  
+- Uses machine learning, not hard-coded rules  
+- Adjusts signals using NIFTY + BANKNIFTY market bias  
+- Includes a data-grounded AI assistant for insights  
 
--Uses machine learning, not hard-coded rules
-
--Adjusts signals using NIFTY + BANKNIFTY market bias
-
--Includes a data-grounded AI assistant for insights
 
 ✨ Why This Project Stands Out
 
