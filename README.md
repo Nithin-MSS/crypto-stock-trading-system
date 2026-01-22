@@ -73,6 +73,7 @@ Answers questions like:
 Market Data → Feature Engineering → ML Model
            → Signal + Confidence → Market Bias
            → Dashboard + Assistant
+
 🧩 Design Decisions
 Why RandomForest?
 
@@ -111,4 +112,4 @@ Why RandomForest?
 👤 Author
 
 M. S. S. Nithin
-Final Year B.Tech – CSE (AI & ML)
+
