@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestRegressor
 import matplotlib.pyplot as plt
 
 # --------------------------------------------------
-# Streamlit Page Config
+# Streamlit Config
 # --------------------------------------------------
 st.set_page_config(
     page_title="Real-Time Trading Signal System",
@@ -16,7 +16,7 @@ st.set_page_config(
 st.title("📈 Real-Time Crypto & Stock Trading Signal System")
 
 # --------------------------------------------------
-# Sidebar Controls
+# Sidebar
 # --------------------------------------------------
 st.sidebar.header("Configuration")
 
@@ -42,7 +42,7 @@ def load_data(symbol, start, end):
 data = load_data(symbol, start_date, end_date)
 
 if data.empty:
-    st.error("No data found. Please check the symbol.")
+    st.error("No data found. Check the symbol.")
     st.stop()
 
 # --------------------------------------------------
@@ -59,8 +59,8 @@ features = ["MA_Short", "MA_Long", "Volatility"]
 X = data[features]
 y = data["Close"].shift(-1)
 
-X = X[:-1]
-y = y[:-1]
+X = X.iloc[:-1]
+y = y.iloc[:-1]
 
 # --------------------------------------------------
 # Model Training
@@ -74,10 +74,10 @@ model = RandomForestRegressor(
 model.fit(X, y)
 
 data["Prediction"] = np.nan
-data.iloc[-len(X):, data.columns.get_loc("Prediction")] = model.predict(X)
+data.loc[X.index, "Prediction"] = model.predict(X)
 
 # --------------------------------------------------
-# Signal Generation (FIXED BUG)
+# Trading Signal (SCALAR SAFE)
 # --------------------------------------------------
 latest_price = float(data["Close"].iloc[-1])
 predicted_price = float(data["Prediction"].dropna().iloc[-1])
@@ -117,15 +117,17 @@ ax.legend()
 st.pyplot(fig)
 
 # --------------------------------------------------
-# Basic Backtesting
+# CLEAN BACKTESTING (FIXED)
 # --------------------------------------------------
 st.subheader("Backtesting Performance")
 
-data["Position"] = np.where(data["Prediction"] > data["Close"], 1, -1)
-data["Strategy_Return"] = data["Position"].shift(1) * data["Return"]
+bt = data[["Close", "Prediction", "Return"]].dropna()
 
-strategy_return = (data["Strategy_Return"] + 1).prod() - 1
-buy_hold_return = (data["Return"] + 1).prod() - 1
+bt["Position"] = np.where(bt["Prediction"] > bt["Close"], 1, -1)
+bt["Strategy_Return"] = bt["Position"].shift(1) * bt["Return"]
+
+strategy_return = (bt["Strategy_Return"] + 1).prod() - 1
+buy_hold_return = (bt["Return"] + 1).prod() - 1
 
 st.write(f"📊 Strategy Return: **{strategy_return * 100:.2f}%**")
 st.write(f"📈 Buy & Hold Return: **{buy_hold_return * 100:.2f}%**")
