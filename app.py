@@ -53,6 +53,18 @@ symbols = (
 )
 
 # --------------------------------------------------
+# Company alias map (🔥 FIX)
+# --------------------------------------------------
+COMPANY_ALIASES = {
+    "tata": ["TATAMOTORS.NS"],
+    "tatamotors": ["TATAMOTORS.NS"],
+    "tcs": ["TCS.NS"],
+    "reliance": ["RELIANCE.NS"],
+    "infy": ["INFY.NS"],
+    "infosys": ["INFY.NS"]
+}
+
+# --------------------------------------------------
 # Helpers
 # --------------------------------------------------
 @st.cache_data
@@ -156,90 +168,63 @@ with st.spinner("Running live market analysis..."):
             continue
 
 # --------------------------------------------------
-# Display Market Bias
+# UI OUTPUT
 # --------------------------------------------------
 st.subheader("🌍 Market Bias")
 st.metric("🇮🇳 India Market Bias", india_bias)
 
-# --------------------------------------------------
-# Signal Table
-# --------------------------------------------------
 st.subheader("📈 Live Trading Signals")
-
 if results:
-    df_results = pd.DataFrame(results).sort_values(
-        "Confidence (%)", ascending=False
-    )
-    st.dataframe(df_results, use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(results), use_container_width=True, hide_index=True)
 else:
     st.warning("No signals generated.")
 
-# --------------------------------------------------
-# Feature Importance
-# --------------------------------------------------
 st.subheader("🧠 Feature Importance")
-
 if feature_importance_ref is not None:
     fig, ax = plt.subplots()
     ax.bar(["MA Short", "MA Long", "Volatility"], feature_importance_ref)
-    ax.set_ylabel("Importance")
     st.pyplot(fig)
 
 # --------------------------------------------------
-# 🤖 Rule-Based AI Trading Assistant (FIXED)
+# 🤖 CHATBOT (🔥 FIXED)
 # --------------------------------------------------
 st.subheader("🤖 AI Trading Assistant")
-st.caption("Ask naturally: 'Should I buy Tata?' or 'Buy or sell TCS?'")
+st.caption("Ask: 'Should I buy Tata?', 'Sell TCS?', 'Buy or sell Reliance?'")
 
-user_query = st.chat_input("Ask about market trend or a stock")
+user_query = st.chat_input("Ask about market or stocks")
 
 def chatbot_answer(query):
     q = query.lower()
 
-    # Market questions
     if "market" in q:
         return f"The current India market bias is **{india_bias}**."
 
-    # Buy / Sell questions
     if "buy" in q or "sell" in q:
-        for r in results:
-            symbol = r["Symbol"].lower()
-            company_key = symbol.replace(".ns", "").replace("-", "")
-
-            if company_key in q or symbol in q:
-                return (
-                    f"{r['Symbol']} is marked as **{r['Signal']}** "
-                    f"with **{r['Confidence (%)']}%** confidence "
-                    f"given a {india_bias} market."
-                )
+        for alias, symbols_list in COMPANY_ALIASES.items():
+            if alias in q:
+                for s in symbols_list:
+                    for r in results:
+                        if r["Symbol"] == s:
+                            return (
+                                f"{r['Symbol']} is marked as **{r['Signal']}** "
+                                f"with **{r['Confidence (%)']}%** confidence "
+                                f"given a {india_bias} market."
+                            )
 
         return (
-            "I couldn’t find that stock in the current watchlist. "
-            "Try adding it to the watchlist or check the spelling."
+            "I couldn’t recognise the stock name. "
+            "Try names like Tata, TCS, Reliance, or Infosys."
         )
-
-    # Safe opportunities
-    if "safe" in q or "opportunity" in q:
-        strong_buys = [r for r in results if r["Signal"] == "STRONG BUY"]
-        if not strong_buys:
-            return (
-                "There are currently no STRONG BUY opportunities. "
-                f"The market bias is {india_bias}, so caution is advised."
-            )
-        else:
-            names = ", ".join(r["Symbol"] for r in strong_buys)
-            return f"Strong buy candidates: {names}"
 
     return (
         "You can ask:\n"
-        "- Should I buy Tata Motors?\n"
+        "- Should I buy Tata?\n"
         "- Buy or sell TCS?\n"
-        "- Is the market bullish or bearish?\n"
-        "- Are there any safe opportunities?"
+        "- Is Reliance a sell?\n"
+        "- What is the market trend?"
     )
 
 if user_query:
-    reply = chatbot_answer(user_query)
-    st.chat_message("assistant").write(reply)
+    st.chat_message("assistant").write(chatbot_answer(user_query))
 
 st.caption("⚠️ Educational project only. Not financial advice.")
