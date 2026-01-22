@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 # --------------------------------------------------
 # Streamlit Config
 # --------------------------------------------------
-st.set_page_config(page_title="India Trading Signal System", layout="wide")
+st.set_page_config(
+    page_title="India Trading Signal System",
+    layout="wide"
+)
 
 st.title("📊 India Market Trading Signal System")
 st.caption("ML-based trading signals with India market bias")
@@ -35,7 +38,7 @@ ma_short = st.sidebar.slider("Short MA", 5, 30, 5)
 ma_long = st.sidebar.slider("Long MA", 20, 100, 30)
 
 # --------------------------------------------------
-# Watchlist
+# Watchlists
 # --------------------------------------------------
 WATCHLISTS = {
     "India Stocks": ["TATAMOTORS.NS", "TCS.NS", "RELIANCE.NS", "INFY.NS"]
@@ -48,7 +51,7 @@ symbols = (
 )
 
 # --------------------------------------------------
-# Company Aliases
+# Company Aliases (CRITICAL)
 # --------------------------------------------------
 COMPANY_ALIASES = {
     "tata": "TATAMOTORS.NS",
@@ -60,7 +63,7 @@ COMPANY_ALIASES = {
 }
 
 # --------------------------------------------------
-# Helpers
+# Data Helpers
 # --------------------------------------------------
 @st.cache_data
 def load_data(symbol):
@@ -98,7 +101,7 @@ def predict_signal(df):
 
 
 # --------------------------------------------------
-# India Market Bias
+# India Market Bias (NIFTY + BANKNIFTY)
 # --------------------------------------------------
 india_indices = ["^NSEI", "^NSEBANK"]
 bias_votes = []
@@ -118,11 +121,11 @@ else:
     india_bias = "🟡 Sideways"
 
 # --------------------------------------------------
-# Run Signals
+# Run Stock Signals
 # --------------------------------------------------
 results = []
 
-with st.spinner("Running live analysis..."):
+with st.spinner("Running live market analysis..."):
     for sym in symbols:
         try:
             df = load_data(sym)
@@ -151,27 +154,36 @@ with st.spinner("Running live analysis..."):
             continue
 
 # --------------------------------------------------
-# UI
+# UI Output
 # --------------------------------------------------
 st.subheader("🌍 India Market Bias")
 st.metric("Market Bias", india_bias)
 
-st.subheader("📈 Live Signals")
-st.dataframe(pd.DataFrame(results), hide_index=True, use_container_width=True)
+st.subheader("📈 Live Trading Signals")
+if results:
+    st.dataframe(pd.DataFrame(results), hide_index=True, use_container_width=True)
+else:
+    st.warning("No signals generated.")
 
 # --------------------------------------------------
-# 🤖 CHATBOT (FIXED)
+# 🤖 AI Trading Assistant (100% RELIABLE)
 # --------------------------------------------------
 st.subheader("🤖 AI Trading Assistant")
-st.caption("Ask: 'Should I buy Tata?', 'Sell TCS?', 'Market trend?'")
+st.caption(
+    "Ask things like:\n"
+    "- Should I buy Tata?\n"
+    "- Sell TCS?\n"
+    "- What is the market trend?"
+)
 
-user_query = st.chat_input("Type your question")
+question = st.text_input("Enter your question")
+ask = st.button("Ask")
 
 def chatbot_answer(q):
     q = q.lower().strip()
 
     if not q:
-        return "Please ask a question."
+        return "Please type a question."
 
     if "market" in q:
         return f"The current India market bias is **{india_bias}**."
@@ -182,11 +194,11 @@ def chatbot_answer(q):
                 for r in results:
                     if r["Symbol"] == symbol:
                         return (
-                            f"{symbol} is a **{r['Signal']}** "
+                            f"{symbol} is currently a **{r['Signal']}** "
                             f"with **{r['Confidence']}%** confidence "
                             f"given a {india_bias} market."
                         )
-        return "That stock is not in the current watchlist."
+        return "That stock is not part of the current watchlist."
 
     return (
         "Try asking:\n"
@@ -195,14 +207,8 @@ def chatbot_answer(q):
         "- What is the market trend?"
     )
 
-# 🔥 Render BOTH user and assistant
-if user_query is not None:
-    with st.chat_message("user"):
-        st.write(user_query)
-
-    reply = chatbot_answer(user_query)
-
-    with st.chat_message("assistant"):
-        st.write(reply)
+if ask:
+    response = chatbot_answer(question)
+    st.success(response)
 
 st.caption("⚠️ Educational project only. Not financial advice.")
