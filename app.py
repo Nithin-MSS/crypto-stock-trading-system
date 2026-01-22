@@ -8,9 +8,13 @@ import matplotlib.pyplot as plt
 # --------------------------------------------------
 # Streamlit Config
 # --------------------------------------------------
-st.set_page_config(page_title="Global & India Trading Signal System", layout="wide")
+st.set_page_config(
+    page_title="Global & India Trading Signal System",
+    layout="wide"
+)
+
 st.title("📊 Global & India Market Trading Signal System")
-st.caption("ML-based multi-asset trading signals with NIFTY market intelligence")
+st.caption("ML-based multi-asset trading signals with India market intelligence")
 
 # --------------------------------------------------
 # Sidebar
@@ -89,16 +93,20 @@ def predict_signal(df):
 
 
 # --------------------------------------------------
-# INDIA MARKET BIAS (NIFTY + BANKNIFTY)
+# India Market Bias (NIFTY + BANKNIFTY)
 # --------------------------------------------------
-india_indices = {"NIFTY 50": "^NSEI", "BANKNIFTY": "^NSEBANK"}
+india_indices = {
+    "NIFTY 50": "^NSEI",
+    "BANKNIFTY": "^NSEBANK"
+}
+
 india_signals = []
 
 for idx in india_indices.values():
-    df_idx = load_data(idx)
-    if not df_idx.empty:
-        df_idx = prepare_features(df_idx)
-        sig, _, _ = predict_signal(df_idx)
+    idx_df = load_data(idx)
+    if not idx_df.empty:
+        idx_df = prepare_features(idx_df)
+        sig, _, _ = predict_signal(idx_df)
         india_signals.append(sig)
 
 if india_signals.count(1) == 2:
@@ -109,7 +117,7 @@ else:
     india_bias = "🟡 Sideways"
 
 # --------------------------------------------------
-# RUN SIGNAL SYSTEM
+# Run Signals
 # --------------------------------------------------
 results = []
 feature_importance_ref = None
@@ -123,12 +131,10 @@ with st.spinner("Running live market analysis..."):
 
             data = prepare_features(data)
             signal, confidence, importance = predict_signal(data)
-
             price = round(float(data["Close"].iloc[-1]), 2)
 
             label = "BUY" if signal == 1 else "SELL"
 
-            # India enhancement
             if sym.endswith(".NS"):
                 if india_bias.startswith("🟢") and label == "BUY":
                     label = "STRONG BUY"
@@ -151,15 +157,13 @@ with st.spinner("Running live market analysis..."):
             continue
 
 # --------------------------------------------------
-# DISPLAY MARKET BIAS
+# Display Market Bias
 # --------------------------------------------------
 st.subheader("🌍 Market Bias")
-
-c1, c2 = st.columns(2)
-c1.metric("🇮🇳 India Market Bias", india_bias)
+st.metric("🇮🇳 India Market Bias", india_bias)
 
 # --------------------------------------------------
-# SIGNAL TABLE
+# Signal Table
 # --------------------------------------------------
 st.subheader("📈 Live Trading Signals")
 
@@ -172,93 +176,56 @@ else:
     st.warning("No signals generated.")
 
 # --------------------------------------------------
-# FEATURE IMPORTANCE
+# Feature Importance
 # --------------------------------------------------
 st.subheader("🧠 Feature Importance")
 
 if feature_importance_ref is not None:
     fig, ax = plt.subplots()
     ax.bar(["MA Short", "MA Long", "Volatility"], feature_importance_ref)
+    ax.set_ylabel("Importance")
     st.pyplot(fig)
 
-# ==================================================
-# 🤖 LLM-POWERED EXPLANATION CHATBOT (ZERO COST)
-# ==================================================
+# --------------------------------------------------
+# 🤖 Rule-Based AI Trading Assistant (Deploy-Safe)
+# --------------------------------------------------
+st.subheader("🤖 AI Trading Assistant")
+st.caption("Context-aware assistant powered by live ML signals (no APIs)")
 
-st.subheader("🤖 AI Trading Assistant (Explainability Bot)")
-st.caption("Powered by a local open-source LLM (no APIs, no cost)")
+user_query = st.chat_input("Ask about market trend or a stock")
 
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-import torch
+def chatbot_answer(query):
+    q = query.lower()
 
-# ---------------- Load Model (cached) ----------------
-@st.cache_resource
-def load_llm():
-    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
-    model = T5ForConditionalGeneration.from_pretrained(
-        "google/flan-t5-small"
+    if "market" in q:
+        return f"The current India market bias is **{india_bias}**."
+
+    if "buy" in q or "sell" in q:
+        for r in results:
+            if r["Symbol"].lower() in q:
+                return (
+                    f"{r['Symbol']} is marked as **{r['Signal']}** "
+                    f"with **{r['Confidence (%)']}%** confidence "
+                    f"given a {india_bias} market."
+                )
+
+    if "safe" in q or "opportunity" in q:
+        strong_buys = [r for r in results if r["Signal"] == "STRONG BUY"]
+        if not strong_buys:
+            return (
+                "Currently there are no STRONG BUY opportunities. "
+                f"The market bias is {india_bias}, so caution is advised."
+            )
+
+    return (
+        "You can ask about:\n"
+        "- Market trend\n"
+        "- Buy or sell a specific stock\n"
+        "- Safer opportunities"
     )
-    return tokenizer, model
 
-tokenizer, llm_model = load_llm()
-
-# ---------------- Chat Memory ----------------
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-# ---------------- User Input ----------------
-user_query = st.chat_input("Ask about market trend, a stock, or signals...")
-
-# ---------------- Helper: Build Context ----------------
-def build_context(user_query):
-    context = f"""
-India Market Bias: {india_bias}
-
-Available Stock Signals:
-"""
-
-    for row in results:
-        context += (
-            f"{row['Symbol']} -> {row['Signal']} "
-            f"(Confidence: {row['Confidence (%)']}%)\n"
-        )
-
-    context += f"""
-User Question:
-{user_query}
-
-Explain clearly using the data above.
-Do not give financial advice.
-"""
-    return context.strip()
-
-# ---------------- Generate Answer ----------------
-def generate_answer(prompt):
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
-    outputs = llm_model.generate(
-        **inputs,
-        max_length=200,
-        do_sample=False
-    )
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-# ---------------- Chat Flow ----------------
 if user_query:
-    with st.spinner("Thinking..."):
-        prompt = build_context(user_query)
-        answer = generate_answer(prompt)
+    reply = chatbot_answer(user_query)
+    st.chat_message("assistant").write(reply)
 
-    st.session_state.chat_history.append(
-        {"user": user_query, "bot": answer}
-    )
-
-# ---------------- Display Chat ----------------
-for chat in st.session_state.chat_history:
-    with st.chat_message("user"):
-        st.write(chat["user"])
-    with st.chat_message("assistant"):
-        st.write(chat["bot"])
-# --------------------------------------------------
-# Footer
-# --------------------------------------------------
 st.caption("⚠️ Educational project only. Not financial advice.")
